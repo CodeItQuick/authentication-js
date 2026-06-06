@@ -140,7 +140,7 @@ The skeleton is the product. The SPIDR stories harden it.
 
 ---
 
-### DB-2 · Persist users to DB
+### ~~DB-2 · Persist users to DB~~ ✅ Done
 
 **Story:** As the system, I need users persisted to a real database so they survive a server restart.
 
@@ -153,10 +153,10 @@ The skeleton is the product. The SPIDR stories harden it.
 - In-memory store is deleted after this story
 
 **Tasks:**
-- [ ] DB connection plugin `src/plugins/db.js`
-- [ ] `users` migration
-- [ ] Rewrite `src/store/users.js` → `src/db/users.js` with same interface (`createUser`, `findByEmail`)
-- [ ] Update register + login handlers to use new module
+- [x] DB connection plugin `src/plugins/db.js`
+- [x] `users` migration
+- [x] Rewrite `src/store/users.js` → `src/db/users.js` with same interface (`createUser`, `findByEmail`)
+- [x] Update register + login handlers to use new module
 
 ---
 
