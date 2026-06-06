@@ -1,6 +1,6 @@
 'use strict'
 
-const { findSession } = require('../store/sessions')
+const { findSession } = require('../db/sessions')
 const { findById } = require('../db/users')
 
 async function authenticate(request, reply) {
@@ -9,7 +9,7 @@ async function authenticate(request, reply) {
     return reply.code(401).send({ message: 'Unauthorized' })
   }
   const token = auth.slice(7)
-  const userId = findSession(token)
+  const userId = await findSession(token)
   if (!userId) {
     return reply.code(401).send({ message: 'Unauthorized' })
   }

@@ -13,3 +13,10 @@ model User {
   passwordHash String
   createdAt    DateTime @default(now())
 }
+
+model Session {
+  token     String   @id @map("_id")
+  userId    String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+}

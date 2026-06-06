@@ -2,7 +2,7 @@
 
 const bcrypt = require('bcrypt')
 const { createUser, findByEmail } = require('../db/users')
-const { createSession, deleteSession } = require('../store/sessions')
+const { createSession, deleteSession } = require('../db/sessions')
 const { authenticate } = require('../hooks/authenticate')
 
 const BCRYPT_ROUNDS = 12
@@ -36,12 +36,12 @@ async function authRoutes(fastify) {
     if (!user || !valid) {
       return reply.code(401).send({ message: 'Invalid credentials' })
     }
-    const sessionToken = createSession(user.id)
+    const sessionToken = await createSession(user.id)
     return { sessionToken }
   })
 
   fastify.post('/auth/logout', { preHandler: authenticate }, async (request, reply) => {
-    deleteSession(request.sessionToken)
+    await deleteSession(request.sessionToken)
     return reply.code(204).send()
   })
 }
