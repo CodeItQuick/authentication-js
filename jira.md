@@ -126,17 +126,17 @@ The skeleton is the product. The SPIDR stories harden it.
 
 ## EPIC-3 · Persist to a Real Database (SPIDR — Data)
 
-### DB-1 · (Spike) Choose DB client + migration strategy
+### ~~DB-1 · (Spike) Choose DB client + migration strategy~~ ✅ Done
 
 **Story:** As a team, we need to decide on DB client and schema migration approach before wiring persistence.
 
 **Acceptance Criteria:**
 - ADR written in `docs/adr/001-db.md`
-- Decision: Prisma / Drizzle / raw `pg` — chosen with rationale
-- Migration tool identified (Prisma Migrate / Drizzle Kit / `node-pg-migrate`)
+- Decision: MongoDB + Prisma — chosen with rationale
+- Migration tool identified: Prisma Migrate
 
 **Tasks:**
-- [ ] Evaluate options; write ADR
+- [x] Evaluate options; write ADR (`docs/adr/001-db.md`)
 
 ---
 
