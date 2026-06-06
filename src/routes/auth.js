@@ -1,8 +1,15 @@
 'use strict'
 
+const bcrypt = require('bcrypt')
 const { createUser, findByEmail } = require('../store/users')
 const { createSession, deleteSession } = require('../store/sessions')
 const { authenticate } = require('../hooks/authenticate')
+
+const BCRYPT_ROUNDS = 12
+
+// Pre-computed dummy hash used in the not-found branch to keep response time
+// consistent and prevent user enumeration via timing.
+const DUMMY_HASH = bcrypt.hashSync('dummy', BCRYPT_ROUNDS)
 
 async function authRoutes(fastify) {
   fastify.post('/auth/register', async (request, reply) => {
@@ -10,7 +17,8 @@ async function authRoutes(fastify) {
     if (!email || !password) {
       return reply.code(400).send({ message: 'email and password are required' })
     }
-    const user = createUser(email, password)
+    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS)
+    const user = createUser(email, passwordHash)
     if (!user) {
       return reply.code(409).send({ message: 'Email already registered' })
     }
@@ -23,7 +31,9 @@ async function authRoutes(fastify) {
       return reply.code(400).send({ message: 'email and password are required' })
     }
     const user = findByEmail(email)
-    if (!user || user.password !== password) {
+    const hash = user ? user.passwordHash : DUMMY_HASH
+    const valid = await bcrypt.compare(password, hash)
+    if (!user || !valid) {
       return reply.code(401).send({ message: 'Invalid credentials' })
     }
     const sessionToken = createSession(user.id)

@@ -102,9 +102,9 @@ The skeleton is the product. The SPIDR stories harden it.
 
 ---
 
-## EPIC-2 · Harden Passwords (SPIDR — Rules)
+## ~~EPIC-2 · Harden Passwords (SPIDR — Rules)~~ ✅ Done
 
-### SEC-1 · Replace plaintext passwords with bcrypt
+### ~~SEC-1 · Replace plaintext passwords with bcrypt~~ ✅ Done
 
 **Story:** As the system, I need passwords hashed at rest so a leaked database doesn't expose credentials.
 
@@ -117,10 +117,10 @@ The skeleton is the product. The SPIDR stories harden it.
 - Timing-safe: `bcrypt.compare` runs even if user is not found (against a dummy hash)
 
 **Tasks:**
-- [ ] Install `bcrypt`
-- [ ] `src/store/users.js` — change `password` field to `passwordHash`
-- [ ] Register: `bcrypt.hash(password, 12)` before `createUser`
-- [ ] Login: `bcrypt.compare(password, user.passwordHash)` — if user not found, compare against a static dummy hash to prevent timing attacks
+- [x] Install `bcrypt`
+- [x] `src/store/users.js` — change `password` field to `passwordHash`
+- [x] Register: `bcrypt.hash(password, 12)` before `createUser`
+- [x] Login: `bcrypt.compare(password, user.passwordHash)` — if user not found, compare against a static dummy hash to prevent timing attacks
 
 ---
 
