@@ -6,6 +6,7 @@ function buildApp(opts = {}) {
   const app = fastify(opts)
 
   app.register(require('./plugins/env'))
+  app.register(require('./plugins/db'))
 
   // Allow POST/PUT routes that intentionally send no body (e.g. logout)
   app.addContentTypeParser('*', (_request, payload, done) => done(null, null))

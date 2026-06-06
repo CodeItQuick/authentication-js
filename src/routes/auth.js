@@ -1,7 +1,7 @@
 'use strict'
 
 const bcrypt = require('bcrypt')
-const { createUser, findByEmail } = require('../store/users')
+const { createUser, findByEmail } = require('../db/users')
 const { createSession, deleteSession } = require('../store/sessions')
 const { authenticate } = require('../hooks/authenticate')
 
@@ -18,7 +18,7 @@ async function authRoutes(fastify) {
       return reply.code(400).send({ message: 'email and password are required' })
     }
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS)
-    const user = createUser(email, passwordHash)
+    const user = await createUser(email, passwordHash)
     if (!user) {
       return reply.code(409).send({ message: 'Email already registered' })
     }
@@ -30,7 +30,7 @@ async function authRoutes(fastify) {
     if (!email || !password) {
       return reply.code(400).send({ message: 'email and password are required' })
     }
-    const user = findByEmail(email)
+    const user = await findByEmail(email)
     const hash = user ? user.passwordHash : DUMMY_HASH
     const valid = await bcrypt.compare(password, hash)
     if (!user || !valid) {

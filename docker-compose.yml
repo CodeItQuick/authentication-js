@@ -6,6 +6,23 @@ services:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping').ok", "--quiet"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 10s
+
+  mongo-init:
+    image: mongo:7
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    restart: "no"
+    command: >
+      mongosh --host mongodb:27017 --eval
+      "try { rs.status() } catch(e) { rs.initiate({_id:'rs0', members:[{_id:0, host:'localhost:27017'}]}) }"
 
 volumes:
   mongo_data:
