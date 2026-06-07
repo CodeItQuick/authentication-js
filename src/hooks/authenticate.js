@@ -1,24 +1,12 @@
 'use strict'
 
-const { findSession } = require('../db/sessions')
-const { findById } = require('../db/users')
-
 async function authenticate(request, reply) {
-  const auth = request.headers.authorization
-  if (!auth || !auth.startsWith('Bearer ')) {
+  try {
+    await request.jwtVerify()
+  } catch {
     return reply.code(401).send({ message: 'Unauthorized' })
   }
-  const token = auth.slice(7)
-  const userId = await findSession(token)
-  if (!userId) {
-    return reply.code(401).send({ message: 'Unauthorized' })
-  }
-  const user = await findById(userId)
-  if (!user) {
-    return reply.code(401).send({ message: 'Unauthorized' })
-  }
-  request.user = { id: user.id, email: user.email }
-  request.sessionToken = token
+  request.user = { id: request.user.sub, email: request.user.email, role: request.user.role }
 }
 
 module.exports = { authenticate }

@@ -2,13 +2,11 @@
 
 const bcrypt = require('bcrypt')
 const { createUser, findByEmail } = require('../db/users')
-const { createSession, deleteSession } = require('../db/sessions')
+const { issueAccessToken } = require('../lib/token')
 const { authenticate } = require('../hooks/authenticate')
 
 const BCRYPT_ROUNDS = 12
 
-// Pre-computed dummy hash used in the not-found branch to keep response time
-// consistent and prevent user enumeration via timing.
 const DUMMY_HASH = bcrypt.hashSync('dummy', BCRYPT_ROUNDS)
 
 async function authRoutes(fastify) {
@@ -36,12 +34,11 @@ async function authRoutes(fastify) {
     if (!user || !valid) {
       return reply.code(401).send({ message: 'Invalid credentials' })
     }
-    const sessionToken = await createSession(user.id)
-    return { sessionToken }
+    const accessToken = issueAccessToken(fastify, user)
+    return { accessToken }
   })
 
   fastify.post('/auth/logout', { preHandler: authenticate }, async (request, reply) => {
-    await deleteSession(request.sessionToken)
     return reply.code(204).send()
   })
 }

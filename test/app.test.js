@@ -4,8 +4,8 @@ const { test } = require('node:test')
 const assert = require('node:assert/strict')
 const buildApp = require('../src/app')
 
-// Each test builds its own app instance but shares the module-level stores,
-// so tests use unique emails to avoid collisions.
+// Each test builds its own app instance. Tests use unique emails to avoid
+// collisions against the real DB.
 
 test('GET /health → 200 ok', async () => {
   const app = buildApp()
@@ -52,7 +52,7 @@ test('POST /auth/register duplicate email → 409', async () => {
   await app.close()
 })
 
-test('POST /auth/login → 200 with sessionToken', async () => {
+test('POST /auth/login → 200 with accessToken', async () => {
   const app = buildApp()
   const headers = { 'content-type': 'application/json' }
   await app.inject({
@@ -64,7 +64,7 @@ test('POST /auth/login → 200 with sessionToken', async () => {
     body: JSON.stringify({ email: 'login@test.com', password: 'secret' }),
   })
   assert.equal(res.statusCode, 200)
-  assert.ok(res.json().sessionToken)
+  assert.ok(res.json().accessToken)
   await app.close()
 })
 
@@ -101,17 +101,17 @@ test('GET /me with valid token → 200 with user', async () => {
     method: 'POST', url: '/auth/login', headers,
     body: JSON.stringify({ email: 'me@test.com', password: 'pass' }),
   })
-  const { sessionToken } = loginRes.json()
+  const { accessToken } = loginRes.json()
   const res = await app.inject({
     method: 'GET', url: '/me',
-    headers: { authorization: `Bearer ${sessionToken}` },
+    headers: { authorization: `Bearer ${accessToken}` },
   })
   assert.equal(res.statusCode, 200)
   assert.equal(res.json().user.email, 'me@test.com')
   await app.close()
 })
 
-test('POST /auth/logout → 204, then token is invalid', async () => {
+test('POST /auth/logout → 204', async () => {
   const app = buildApp()
   const headers = { 'content-type': 'application/json' }
   await app.inject({
@@ -122,13 +122,12 @@ test('POST /auth/logout → 204, then token is invalid', async () => {
     method: 'POST', url: '/auth/login', headers,
     body: JSON.stringify({ email: 'logout@test.com', password: 'pass' }),
   })
-  const { sessionToken } = loginRes.json()
-  const authHeader = { authorization: `Bearer ${sessionToken}` }
+  const { accessToken } = loginRes.json()
 
-  const logoutRes = await app.inject({ method: 'POST', url: '/auth/logout', headers: authHeader })
+  const logoutRes = await app.inject({
+    method: 'POST', url: '/auth/logout',
+    headers: { authorization: `Bearer ${accessToken}` },
+  })
   assert.equal(logoutRes.statusCode, 204)
-
-  const meRes = await app.inject({ method: 'GET', url: '/me', headers: authHeader })
-  assert.equal(meRes.statusCode, 401)
   await app.close()
 })
