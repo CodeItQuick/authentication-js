@@ -20,6 +20,7 @@ async function registerAndVerify(app, email, password) {
 }
 
 beforeEach(async () => {
+  await prisma.apiKey.deleteMany()
   await prisma.refreshToken.deleteMany()
   await prisma.session.deleteMany()
   await prisma.user.deleteMany()
@@ -430,5 +431,99 @@ test('GET /admin/users without token → 401', async () => {
   const app = buildApp()
   const res = await app.inject({ method: 'GET', url: '/admin/users' })
   assert.equal(res.statusCode, 401)
+  await app.close()
+})
+
+test('POST /api-keys → 201 with key, GET /me with ApiKey scheme → 200', async () => {
+  const app = buildApp()
+  const headers = { 'content-type': 'application/json' }
+  await registerAndVerify(app, 'apikey@test.com', 'password1')
+  const loginRes = await app.inject({
+    method: 'POST', url: '/auth/login', headers,
+    body: JSON.stringify({ email: 'apikey@test.com', password: 'password1' }),
+  })
+  const { accessToken } = loginRes.json()
+
+  const createRes = await app.inject({
+    method: 'POST', url: '/api-keys',
+    headers: { ...headers, authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ name: 'my-key' }),
+  })
+  assert.equal(createRes.statusCode, 201)
+  const { id, key } = createRes.json()
+  assert.ok(key)
+
+  const meRes = await app.inject({
+    method: 'GET', url: '/me',
+    headers: { authorization: `ApiKey ${key}` },
+  })
+  assert.equal(meRes.statusCode, 200)
+  assert.equal(meRes.json().user.email, 'apikey@test.com')
+
+  await app.close()
+  return id
+})
+
+test('DELETE /api-keys/:id → 204, key no longer works', async () => {
+  const app = buildApp()
+  const headers = { 'content-type': 'application/json' }
+  await registerAndVerify(app, 'apikey2@test.com', 'password1')
+  const loginRes = await app.inject({
+    method: 'POST', url: '/auth/login', headers,
+    body: JSON.stringify({ email: 'apikey2@test.com', password: 'password1' }),
+  })
+  const { accessToken } = loginRes.json()
+
+  const createRes = await app.inject({
+    method: 'POST', url: '/api-keys',
+    headers: { ...headers, authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ name: 'temp-key' }),
+  })
+  const { id, key } = createRes.json()
+
+  const deleteRes = await app.inject({
+    method: 'DELETE', url: `/api-keys/${id}`,
+    headers: { authorization: `Bearer ${accessToken}` },
+  })
+  assert.equal(deleteRes.statusCode, 204)
+
+  const meRes = await app.inject({
+    method: 'GET', url: '/me',
+    headers: { authorization: `ApiKey ${key}` },
+  })
+  assert.equal(meRes.statusCode, 401)
+  await app.close()
+})
+
+test('DELETE /api-keys/:id belonging to another user → 404', async () => {
+  const app = buildApp()
+  const headers = { 'content-type': 'application/json' }
+  await registerAndVerify(app, 'owner@test.com', 'password1')
+  await registerAndVerify(app, 'other@test.com', 'password1')
+
+  const ownerLogin = await app.inject({
+    method: 'POST', url: '/auth/login', headers,
+    body: JSON.stringify({ email: 'owner@test.com', password: 'password1' }),
+  })
+  const ownerToken = ownerLogin.json().accessToken
+
+  const otherLogin = await app.inject({
+    method: 'POST', url: '/auth/login', headers,
+    body: JSON.stringify({ email: 'other@test.com', password: 'password1' }),
+  })
+  const otherToken = otherLogin.json().accessToken
+
+  const createRes = await app.inject({
+    method: 'POST', url: '/api-keys',
+    headers: { ...headers, authorization: `Bearer ${ownerToken}` },
+    body: JSON.stringify({ name: 'owners-key' }),
+  })
+  const { id } = createRes.json()
+
+  const res = await app.inject({
+    method: 'DELETE', url: `/api-keys/${id}`,
+    headers: { authorization: `Bearer ${otherToken}` },
+  })
+  assert.equal(res.statusCode, 404)
   await app.close()
 })

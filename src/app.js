@@ -17,6 +17,7 @@ function buildApp(opts = {}) {
   app.register(require('./routes/auth'))
   app.register(require('./routes/me'))
   app.register(require('./routes/admin'))
+  app.register(require('./routes/apiKeys'))
 
   return app
 }

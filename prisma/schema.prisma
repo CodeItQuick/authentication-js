@@ -31,3 +31,12 @@ model RefreshToken {
   revokedAt DateTime?
   createdAt DateTime  @default(now())
 }
+
+model ApiKey {
+  id        String    @id @default(uuid()) @map("_id")
+  keyHash   String    @unique
+  userId    String
+  name      String
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+}
