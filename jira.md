@@ -309,7 +309,7 @@ The skeleton is the product. The SPIDR stories harden it.
 
 ## EPIC-8 · Email Verification (SPIDR — Interface)
 
-### EML-1 · Require email verification before login
+### ~~EML-1 · Require email verification before login~~ ✅ Done
 
 **Story:** As the system, I need to confirm the user owns their email before allowing login.
 
@@ -319,10 +319,10 @@ The skeleton is the product. The SPIDR stories harden it.
 - Unverified users attempting login get `403 { message: "Email not verified" }`
 
 **Tasks:**
-- [ ] `emailVerifiedAt DateTime?` field + `prisma db push`
-- [ ] Verification token: JWT `{ sub: userId, purpose: "email-verify" }`, TTL 24h
-- [ ] `GET /auth/verify` handler
-- [ ] Login handler checks `emailVerifiedAt`
+- [x] `emailVerifiedAt DateTime?` field + `prisma db push`
+- [x] Verification token: JWT `{ sub: userId, purpose: "email-verify" }`, TTL 24h
+- [x] `GET /auth/verify` handler
+- [x] Login handler checks `emailVerifiedAt`
 
 ---
 
