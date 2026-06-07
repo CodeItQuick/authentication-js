@@ -258,7 +258,7 @@ The skeleton is the product. The SPIDR stories harden it.
 
 ## EPIC-7 · Password Reset (SPIDR — Path)
 
-### PWD-0 · Change password (authenticated)
+### ~~PWD-0 · Change password (authenticated)~~ ✅ Done
 
 **Story:** As a logged-in user, I need to change my password so I can update my credentials.
 
@@ -269,13 +269,13 @@ The skeleton is the product. The SPIDR stories harden it.
 - Returns `200`
 
 **Tasks:**
-- [ ] `updatePassword(id, passwordHash)` in `src/db/users.js`
-- [ ] `revokeAllForUser(userId)` in `src/lib/token.js`
-- [ ] `POST /auth/change-password` handler
+- [x] `updatePassword(id, passwordHash)` in `src/db/users.js`
+- [x] `revokeAllForUser(userId)` in `src/lib/token.js`
+- [x] `POST /auth/change-password` handler
 
 ---
 
-### PWD-1 · Request password reset token
+### ~~PWD-1 · Request password reset token~~ ✅ Done
 
 **Story:** As a user who forgot my password, I need to request a reset token so I can set a new password.
 
@@ -285,12 +285,12 @@ The skeleton is the product. The SPIDR stories harden it.
 - Reset token: short-lived JWT `{ sub: userId, purpose: "password-reset", exp: +1h }`
 
 **Tasks:**
-- [ ] `issuePasswordResetToken(fastify, userId)` in `src/lib/token.js`
-- [ ] `POST /auth/forgot-password` handler
+- [x] `issuePasswordResetToken(fastify, userId)` in `src/lib/token.js`
+- [x] `POST /auth/forgot-password` handler
 
 ---
 
-### PWD-2 · Consume reset token
+### ~~PWD-2 · Consume reset token~~ ✅ Done
 
 **Story:** As a user, I need to set a new password using my reset token.
 
@@ -301,9 +301,9 @@ The skeleton is the product. The SPIDR stories harden it.
 - Returns `200`
 
 **Tasks:**
-- [ ] Verify JWT, check `purpose` claim
-- [ ] `bcrypt.hash` new password + update DB row
-- [ ] Revoke all `refresh_tokens` for `user_id`
+- [x] Verify JWT, check `purpose` claim
+- [x] `bcrypt.hash` new password + update DB row
+- [x] Revoke all `refresh_tokens` for `user_id`
 
 ---
 
