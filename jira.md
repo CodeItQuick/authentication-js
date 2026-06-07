@@ -345,7 +345,7 @@ The skeleton is the product. The SPIDR stories harden it.
 
 ---
 
-### AUTHZ-2 · API key authentication (alternative interface)
+### ~~AUTHZ-2 · API key authentication (alternative interface)~~ ✅ Done
 
 **Story:** As a machine client, I need to authenticate via API key instead of JWT so scripts can call the API without a login flow.
 
@@ -355,9 +355,9 @@ The skeleton is the product. The SPIDR stories harden it.
 - Keys can be created via `POST /api-keys` and revoked via `DELETE /api-keys/:id`
 
 **Tasks:**
-- [ ] `api_keys` table + migration
-- [ ] `src/hooks/authenticate.js` — detect scheme, branch to JWT or API key validation
-- [ ] `POST /api-keys`, `DELETE /api-keys/:id` routes
+- [x] `api_keys` table + migration
+- [x] `src/hooks/authenticate.js` — detect scheme, branch to JWT or API key validation
+- [x] `POST /api-keys`, `DELETE /api-keys/:id` routes
 
 ---
 
