@@ -33,7 +33,7 @@ test('POST /auth/register → 201 with user', async () => {
     method: 'POST',
     url: '/auth/register',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ email: 'register@test.com', password: 'pass' }),
+    body: JSON.stringify({ email: 'register@test.com', password: 'password1' }),
   })
   assert.equal(res.statusCode, 201)
   const body = res.json()
@@ -42,7 +42,7 @@ test('POST /auth/register → 201 with user', async () => {
   await app.close()
 })
 
-test('POST /auth/register missing fields → 400', async () => {
+test('POST /auth/register missing fields → 400 with errors array', async () => {
   const app = buildApp()
   const res = await app.inject({
     method: 'POST',
@@ -51,12 +51,39 @@ test('POST /auth/register missing fields → 400', async () => {
     body: JSON.stringify({ email: 'nopass@test.com' }),
   })
   assert.equal(res.statusCode, 400)
+  assert.ok(Array.isArray(res.json().errors))
+  await app.close()
+})
+
+test('POST /auth/register invalid email → 400 with errors array', async () => {
+  const app = buildApp()
+  const res = await app.inject({
+    method: 'POST',
+    url: '/auth/register',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'not-an-email', password: 'longpassword' }),
+  })
+  assert.equal(res.statusCode, 400)
+  assert.ok(Array.isArray(res.json().errors))
+  await app.close()
+})
+
+test('POST /auth/register short password → 400 with errors array', async () => {
+  const app = buildApp()
+  const res = await app.inject({
+    method: 'POST',
+    url: '/auth/register',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'short@test.com', password: 'tiny' }),
+  })
+  assert.equal(res.statusCode, 400)
+  assert.ok(Array.isArray(res.json().errors))
   await app.close()
 })
 
 test('POST /auth/register duplicate email → 409', async () => {
   const app = buildApp()
-  const payload = JSON.stringify({ email: 'dup@test.com', password: 'pass' })
+  const payload = JSON.stringify({ email: 'dup@test.com', password: 'password1' })
   const headers = { 'content-type': 'application/json' }
   await app.inject({ method: 'POST', url: '/auth/register', headers, body: payload })
   const res = await app.inject({ method: 'POST', url: '/auth/register', headers, body: payload })
@@ -69,11 +96,11 @@ test('POST /auth/login → 200 with accessToken and refreshToken', async () => {
   const headers = { 'content-type': 'application/json' }
   await app.inject({
     method: 'POST', url: '/auth/register', headers,
-    body: JSON.stringify({ email: 'login@test.com', password: 'secret' }),
+    body: JSON.stringify({ email: 'login@test.com', password: 'secret12' }),
   })
   const res = await app.inject({
     method: 'POST', url: '/auth/login', headers,
-    body: JSON.stringify({ email: 'login@test.com', password: 'secret' }),
+    body: JSON.stringify({ email: 'login@test.com', password: 'secret12' }),
   })
   assert.equal(res.statusCode, 200)
   assert.ok(res.json().accessToken)
@@ -86,7 +113,7 @@ test('POST /auth/login wrong password → 401', async () => {
   const headers = { 'content-type': 'application/json' }
   await app.inject({
     method: 'POST', url: '/auth/register', headers,
-    body: JSON.stringify({ email: 'badpass@test.com', password: 'correct' }),
+    body: JSON.stringify({ email: 'badpass@test.com', password: 'correct1' }),
   })
   const res = await app.inject({
     method: 'POST', url: '/auth/login', headers,
@@ -108,11 +135,11 @@ test('GET /me with valid token → 200 with user', async () => {
   const headers = { 'content-type': 'application/json' }
   await app.inject({
     method: 'POST', url: '/auth/register', headers,
-    body: JSON.stringify({ email: 'me@test.com', password: 'pass' }),
+    body: JSON.stringify({ email: 'me@test.com', password: 'password1' }),
   })
   const loginRes = await app.inject({
     method: 'POST', url: '/auth/login', headers,
-    body: JSON.stringify({ email: 'me@test.com', password: 'pass' }),
+    body: JSON.stringify({ email: 'me@test.com', password: 'password1' }),
   })
   const { accessToken } = loginRes.json()
   const res = await app.inject({
@@ -129,11 +156,11 @@ test('POST /auth/refresh → 200 with new tokens', async () => {
   const headers = { 'content-type': 'application/json' }
   await app.inject({
     method: 'POST', url: '/auth/register', headers,
-    body: JSON.stringify({ email: 'refresh@test.com', password: 'pass' }),
+    body: JSON.stringify({ email: 'refresh@test.com', password: 'password1' }),
   })
   const loginRes = await app.inject({
     method: 'POST', url: '/auth/login', headers,
-    body: JSON.stringify({ email: 'refresh@test.com', password: 'pass' }),
+    body: JSON.stringify({ email: 'refresh@test.com', password: 'password1' }),
   })
   const { refreshToken } = loginRes.json()
   const res = await app.inject({
@@ -152,11 +179,11 @@ test('POST /auth/refresh with used token → 401', async () => {
   const headers = { 'content-type': 'application/json' }
   await app.inject({
     method: 'POST', url: '/auth/register', headers,
-    body: JSON.stringify({ email: 'refresh2@test.com', password: 'pass' }),
+    body: JSON.stringify({ email: 'refresh2@test.com', password: 'password1' }),
   })
   const loginRes = await app.inject({
     method: 'POST', url: '/auth/login', headers,
-    body: JSON.stringify({ email: 'refresh2@test.com', password: 'pass' }),
+    body: JSON.stringify({ email: 'refresh2@test.com', password: 'password1' }),
   })
   const { refreshToken } = loginRes.json()
   await app.inject({
@@ -176,11 +203,11 @@ test('POST /auth/logout → 204, refresh token revoked', async () => {
   const headers = { 'content-type': 'application/json' }
   await app.inject({
     method: 'POST', url: '/auth/register', headers,
-    body: JSON.stringify({ email: 'logout@test.com', password: 'pass' }),
+    body: JSON.stringify({ email: 'logout@test.com', password: 'password1' }),
   })
   const loginRes = await app.inject({
     method: 'POST', url: '/auth/login', headers,
-    body: JSON.stringify({ email: 'logout@test.com', password: 'pass' }),
+    body: JSON.stringify({ email: 'logout@test.com', password: 'password1' }),
   })
   const { accessToken, refreshToken } = loginRes.json()
 
@@ -204,18 +231,18 @@ test('POST /auth/change-password → 200, old refresh tokens revoked', async () 
   const headers = { 'content-type': 'application/json' }
   await app.inject({
     method: 'POST', url: '/auth/register', headers,
-    body: JSON.stringify({ email: 'changepwd@test.com', password: 'oldpass' }),
+    body: JSON.stringify({ email: 'changepwd@test.com', password: 'oldpass1' }),
   })
   const loginRes = await app.inject({
     method: 'POST', url: '/auth/login', headers,
-    body: JSON.stringify({ email: 'changepwd@test.com', password: 'oldpass' }),
+    body: JSON.stringify({ email: 'changepwd@test.com', password: 'oldpass1' }),
   })
   const { accessToken, refreshToken } = loginRes.json()
 
   const changeRes = await app.inject({
     method: 'POST', url: '/auth/change-password',
     headers: { ...headers, authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify({ currentPassword: 'oldpass', newPassword: 'newpass' }),
+    body: JSON.stringify({ currentPassword: 'oldpass1', newPassword: 'newpass' }),
   })
   assert.equal(changeRes.statusCode, 200)
 
@@ -232,11 +259,11 @@ test('POST /auth/change-password wrong current password → 401', async () => {
   const headers = { 'content-type': 'application/json' }
   await app.inject({
     method: 'POST', url: '/auth/register', headers,
-    body: JSON.stringify({ email: 'changepwd2@test.com', password: 'correct' }),
+    body: JSON.stringify({ email: 'changepwd2@test.com', password: 'correct1' }),
   })
   const loginRes = await app.inject({
     method: 'POST', url: '/auth/login', headers,
-    body: JSON.stringify({ email: 'changepwd2@test.com', password: 'correct' }),
+    body: JSON.stringify({ email: 'changepwd2@test.com', password: 'correct1' }),
   })
   const { accessToken } = loginRes.json()
 
@@ -254,7 +281,7 @@ test('POST /auth/forgot-password → 200 with resetToken', async () => {
   const headers = { 'content-type': 'application/json' }
   await app.inject({
     method: 'POST', url: '/auth/register', headers,
-    body: JSON.stringify({ email: 'forgot@test.com', password: 'pass' }),
+    body: JSON.stringify({ email: 'forgot@test.com', password: 'password1' }),
   })
   const res = await app.inject({
     method: 'POST', url: '/auth/forgot-password', headers,
@@ -282,11 +309,11 @@ test('POST /auth/reset-password → 200, old refresh tokens revoked', async () =
   const headers = { 'content-type': 'application/json' }
   await app.inject({
     method: 'POST', url: '/auth/register', headers,
-    body: JSON.stringify({ email: 'reset@test.com', password: 'oldpass' }),
+    body: JSON.stringify({ email: 'reset@test.com', password: 'oldpass1' }),
   })
   const loginRes = await app.inject({
     method: 'POST', url: '/auth/login', headers,
-    body: JSON.stringify({ email: 'reset@test.com', password: 'oldpass' }),
+    body: JSON.stringify({ email: 'reset@test.com', password: 'oldpass1' }),
   })
   const { refreshToken } = loginRes.json()
 

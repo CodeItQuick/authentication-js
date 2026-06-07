@@ -16,12 +16,33 @@ const BCRYPT_ROUNDS = 12
 
 const DUMMY_HASH = bcrypt.hashSync('dummy', BCRYPT_ROUNDS)
 
+const registerSchema = {
+  body: {
+    type: 'object',
+    required: ['email', 'password'],
+    properties: {
+      email: { type: 'string', format: 'email' },
+      password: { type: 'string', minLength: 8 },
+    },
+    additionalProperties: false,
+  },
+}
+
+const loginSchema = {
+  body: {
+    type: 'object',
+    required: ['email', 'password'],
+    properties: {
+      email: { type: 'string', format: 'email' },
+      password: { type: 'string', minLength: 1 },
+    },
+    additionalProperties: false,
+  },
+}
+
 async function authRoutes(fastify) {
-  fastify.post('/auth/register', async (request, reply) => {
+  fastify.post('/auth/register', { schema: registerSchema }, async (request, reply) => {
     const { email, password } = request.body
-    if (!email || !password) {
-      return reply.code(400).send({ message: 'email and password are required' })
-    }
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS)
     const user = await createUser(email, passwordHash)
     if (!user) {
@@ -30,11 +51,8 @@ async function authRoutes(fastify) {
     return reply.code(201).send({ id: user.id, email: user.email })
   })
 
-  fastify.post('/auth/login', async (request, reply) => {
+  fastify.post('/auth/login', { schema: loginSchema }, async (request, reply) => {
     const { email, password } = request.body
-    if (!email || !password) {
-      return reply.code(400).send({ message: 'email and password are required' })
-    }
     const user = await findByEmail(email)
     const hash = user ? user.passwordHash : DUMMY_HASH
     const valid = await bcrypt.compare(password, hash)
