@@ -353,3 +353,15 @@ test('POST /auth/reset-password invalid token → 401', async () => {
   assert.equal(res.statusCode, 401)
   await app.close()
 })
+
+test('POST /auth/login rate limit → 429 after 5 attempts', async () => {
+  const app = buildApp()
+  const headers = { 'content-type': 'application/json' }
+  const body = JSON.stringify({ email: 'ratelimit@test.com', password: 'wrongpass' })
+  let res
+  for (let i = 0; i < 6; i++) {
+    res = await app.inject({ method: 'POST', url: '/auth/login', headers, body })
+  }
+  assert.equal(res.statusCode, 429)
+  await app.close()
+})

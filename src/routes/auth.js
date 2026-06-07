@@ -1,5 +1,6 @@
 'use strict'
 
+const rateLimit = require('@fastify/rate-limit')
 const bcrypt = require('bcrypt')
 const { createUser, findByEmail, findById, updatePassword } = require('../db/users')
 const {
@@ -41,6 +42,14 @@ const loginSchema = {
 }
 
 async function authRoutes(fastify) {
+  await fastify.register(rateLimit, {
+    global: false,
+    keyGenerator: (request) => request.ip,
+    errorResponseBuilder: (_request, context) => ({
+      statusCode: 429,
+      message: `Too many login attempts. Try again in ${Math.ceil(context.ttl / 1000)} seconds.`,
+    }),
+  })
   fastify.post('/auth/register', { schema: registerSchema }, async (request, reply) => {
     const { email, password } = request.body
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS)
@@ -51,7 +60,7 @@ async function authRoutes(fastify) {
     return reply.code(201).send({ id: user.id, email: user.email })
   })
 
-  fastify.post('/auth/login', { schema: loginSchema }, async (request, reply) => {
+  fastify.post('/auth/login', { schema: loginSchema, config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (request, reply) => {
     const { email, password } = request.body
     const user = await findByEmail(email)
     const hash = user ? user.passwordHash : DUMMY_HASH
