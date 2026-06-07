@@ -328,7 +328,7 @@ The skeleton is the product. The SPIDR stories harden it.
 
 ## EPIC-9 · Authorization (SPIDR — Rules + Interface)
 
-### AUTHZ-1 · Role-based route protection
+### ~~AUTHZ-1 · Role-based route protection~~ ✅ Done
 
 **Story:** As the system, I need admin routes gated by role so regular users can't access them.
 
@@ -339,9 +339,9 @@ The skeleton is the product. The SPIDR stories harden it.
 - Applied to `GET /admin/users`
 
 **Tasks:**
-- [ ] `role` column + migration
-- [ ] `src/hooks/requireRole.js`
-- [ ] `src/routes/admin.js` — `GET /admin/users`
+- [x] `role` column + migration
+- [x] `src/hooks/requireRole.js`
+- [x] `src/routes/admin.js` — `GET /admin/users`
 
 ---
 
