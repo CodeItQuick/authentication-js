@@ -160,7 +160,7 @@ The skeleton is the product. The SPIDR stories harden it.
 
 ---
 
-### DB-3 · Persist sessions to DB
+### ~~DB-3 · Persist sessions to DB~~ ✅ Done
 
 **Story:** As the system, I need sessions persisted to a database so they survive a server restart and can be audited.
 
@@ -174,9 +174,9 @@ The skeleton is the product. The SPIDR stories harden it.
 - In-memory store is deleted after this story
 
 **Tasks:**
-- [ ] `sessions` migration
-- [ ] Rewrite `src/store/sessions.js` → `src/db/sessions.js` with same interface
-- [ ] Update login, authenticate hook, logout to use new module
+- [x] `sessions` migration
+- [x] Rewrite `src/store/sessions.js` → `src/db/sessions.js` with same interface
+- [x] Update login, authenticate hook, logout to use new module
 
 ---
 
