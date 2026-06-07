@@ -1,11 +1,23 @@
 'use strict'
 
-const { test } = require('node:test')
+require('dotenv').config({ path: '.env.test', override: true })
+
+const { test, beforeEach, after } = require('node:test')
 const assert = require('node:assert/strict')
+const { PrismaClient } = require('@prisma/client')
 const buildApp = require('../src/app')
 
-// Each test builds its own app instance. Tests use unique emails to avoid
-// collisions against the real DB.
+const prisma = new PrismaClient()
+
+beforeEach(async () => {
+  await prisma.refreshToken.deleteMany()
+  await prisma.session.deleteMany()
+  await prisma.user.deleteMany()
+})
+
+after(async () => {
+  await prisma.$disconnect()
+})
 
 test('GET /health → 200 ok', async () => {
   const app = buildApp()
@@ -52,7 +64,7 @@ test('POST /auth/register duplicate email → 409', async () => {
   await app.close()
 })
 
-test('POST /auth/login → 200 with accessToken', async () => {
+test('POST /auth/login → 200 with accessToken and refreshToken', async () => {
   const app = buildApp()
   const headers = { 'content-type': 'application/json' }
   await app.inject({
@@ -65,6 +77,7 @@ test('POST /auth/login → 200 with accessToken', async () => {
   })
   assert.equal(res.statusCode, 200)
   assert.ok(res.json().accessToken)
+  assert.ok(res.json().refreshToken)
   await app.close()
 })
 
@@ -111,7 +124,54 @@ test('GET /me with valid token → 200 with user', async () => {
   await app.close()
 })
 
-test('POST /auth/logout → 204', async () => {
+test('POST /auth/refresh → 200 with new tokens', async () => {
+  const app = buildApp()
+  const headers = { 'content-type': 'application/json' }
+  await app.inject({
+    method: 'POST', url: '/auth/register', headers,
+    body: JSON.stringify({ email: 'refresh@test.com', password: 'pass' }),
+  })
+  const loginRes = await app.inject({
+    method: 'POST', url: '/auth/login', headers,
+    body: JSON.stringify({ email: 'refresh@test.com', password: 'pass' }),
+  })
+  const { refreshToken } = loginRes.json()
+  const res = await app.inject({
+    method: 'POST', url: '/auth/refresh', headers,
+    body: JSON.stringify({ refreshToken }),
+  })
+  assert.equal(res.statusCode, 200)
+  assert.ok(res.json().accessToken)
+  assert.ok(res.json().refreshToken)
+  assert.notEqual(res.json().refreshToken, refreshToken)
+  await app.close()
+})
+
+test('POST /auth/refresh with used token → 401', async () => {
+  const app = buildApp()
+  const headers = { 'content-type': 'application/json' }
+  await app.inject({
+    method: 'POST', url: '/auth/register', headers,
+    body: JSON.stringify({ email: 'refresh2@test.com', password: 'pass' }),
+  })
+  const loginRes = await app.inject({
+    method: 'POST', url: '/auth/login', headers,
+    body: JSON.stringify({ email: 'refresh2@test.com', password: 'pass' }),
+  })
+  const { refreshToken } = loginRes.json()
+  await app.inject({
+    method: 'POST', url: '/auth/refresh', headers,
+    body: JSON.stringify({ refreshToken }),
+  })
+  const res = await app.inject({
+    method: 'POST', url: '/auth/refresh', headers,
+    body: JSON.stringify({ refreshToken }),
+  })
+  assert.equal(res.statusCode, 401)
+  await app.close()
+})
+
+test('POST /auth/logout → 204, refresh token revoked', async () => {
   const app = buildApp()
   const headers = { 'content-type': 'application/json' }
   await app.inject({
@@ -122,12 +182,19 @@ test('POST /auth/logout → 204', async () => {
     method: 'POST', url: '/auth/login', headers,
     body: JSON.stringify({ email: 'logout@test.com', password: 'pass' }),
   })
-  const { accessToken } = loginRes.json()
+  const { accessToken, refreshToken } = loginRes.json()
 
   const logoutRes = await app.inject({
     method: 'POST', url: '/auth/logout',
-    headers: { authorization: `Bearer ${accessToken}` },
+    headers: { ...headers, authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ refreshToken }),
   })
   assert.equal(logoutRes.statusCode, 204)
+
+  const refreshRes = await app.inject({
+    method: 'POST', url: '/auth/refresh', headers,
+    body: JSON.stringify({ refreshToken }),
+  })
+  assert.equal(refreshRes.statusCode, 401)
   await app.close()
 })

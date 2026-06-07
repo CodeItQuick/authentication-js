@@ -2,7 +2,7 @@
 
 const bcrypt = require('bcrypt')
 const { createUser, findByEmail } = require('../db/users')
-const { issueAccessToken } = require('../lib/token')
+const { issueAccessToken, issueRefreshToken, rotateRefreshToken, revokeToken } = require('../lib/token')
 const { authenticate } = require('../hooks/authenticate')
 
 const BCRYPT_ROUNDS = 12
@@ -35,10 +35,28 @@ async function authRoutes(fastify) {
       return reply.code(401).send({ message: 'Invalid credentials' })
     }
     const accessToken = issueAccessToken(fastify, user)
-    return { accessToken }
+    const refreshToken = await issueRefreshToken(user.id)
+    return { accessToken, refreshToken }
+  })
+
+  fastify.post('/auth/refresh', async (request, reply) => {
+    const { refreshToken } = request.body ?? {}
+    if (!refreshToken) {
+      return reply.code(400).send({ message: 'refreshToken is required' })
+    }
+    try {
+      const tokens = await rotateRefreshToken(fastify, refreshToken)
+      return tokens
+    } catch (err) {
+      return reply.code(err.statusCode ?? 500).send({ message: err.message })
+    }
   })
 
   fastify.post('/auth/logout', { preHandler: authenticate }, async (request, reply) => {
+    const { refreshToken } = request.body ?? {}
+    if (refreshToken) {
+      await revokeToken(refreshToken)
+    }
     return reply.code(204).send()
   })
 }
