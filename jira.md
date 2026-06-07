@@ -203,7 +203,7 @@ The skeleton is the product. The SPIDR stories harden it.
 
 ---
 
-### SES-2 · Add refresh token rotation
+### ~~SES-2 · Add refresh token rotation~~ ✅ Done
 
 **Story:** As a user, I need a long-lived refresh token so I stay logged in without re-entering my password every 15 minutes.
 
@@ -216,10 +216,10 @@ The skeleton is the product. The SPIDR stories harden it.
 - `POST /auth/logout` revokes the refresh token
 
 **Tasks:**
-- [ ] `refresh_tokens` migration
-- [ ] `src/lib/token.js` — `issueRefreshToken`, `rotateRefreshToken`, `revokeToken`
-- [ ] `POST /auth/refresh` route
-- [ ] Update login + logout handlers
+- [x] `refresh_tokens` migration
+- [x] `src/lib/token.js` — `issueRefreshToken`, `rotateRefreshToken`, `revokeToken`
+- [x] `POST /auth/refresh` route
+- [x] Update login + logout handlers
 
 ---
 
