@@ -225,7 +225,7 @@ The skeleton is the product. The SPIDR stories harden it.
 
 ## EPIC-5 · Input Validation (SPIDR — Rules)
 
-### VAL-1 · Validate register + login inputs
+### ~~VAL-1 · Validate register + login inputs~~ ✅ Done
 
 **Story:** As an API, I need to reject malformed requests before they hit business logic.
 
@@ -235,8 +235,8 @@ The skeleton is the product. The SPIDR stories harden it.
 - Fastify JSON schema handles validation (no extra library needed)
 
 **Tasks:**
-- [ ] Add `schema.body` to register + login routes
-- [ ] `src/plugins/errorHandler.js` — serialize Fastify validation errors into `{ errors: [{ field, message }] }`
+- [x] Add `schema.body` to register + login routes
+- [x] `src/plugins/errorHandler.js` — serialize Fastify validation errors into `{ errors: [{ field, message }] }`
 
 ---
 
