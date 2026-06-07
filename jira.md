@@ -242,7 +242,7 @@ The skeleton is the product. The SPIDR stories harden it.
 
 ## EPIC-6 · Rate Limiting (SPIDR — Rules)
 
-### RATE-1 · Throttle login attempts
+### ~~RATE-1 · Throttle login attempts~~ ✅ Done
 
 **Story:** As the system, I need to throttle login attempts per IP to prevent brute force.
 
@@ -251,8 +251,8 @@ The skeleton is the product. The SPIDR stories harden it.
 - Rate limit scoped only to `POST /auth/login` (not global)
 
 **Tasks:**
-- [ ] Install `@fastify/rate-limit`
-- [ ] Apply as route-level plugin on login route only
+- [x] Install `@fastify/rate-limit`
+- [x] Apply as route-level plugin on login route only
 
 ---
 
