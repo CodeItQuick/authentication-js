@@ -30,4 +30,8 @@ async function updatePassword(id, passwordHash) {
   return client().user.update({ where: { id }, data: { passwordHash } })
 }
 
-module.exports = { createUser, findByEmail, findById, updatePassword }
+async function verifyEmail(id) {
+  return client().user.update({ where: { id }, data: { emailVerifiedAt: new Date() } })
+}
+
+module.exports = { createUser, findByEmail, findById, updatePassword, verifyEmail }

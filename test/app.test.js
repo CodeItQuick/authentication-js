@@ -9,6 +9,16 @@ const buildApp = require('../src/app')
 
 const prisma = new PrismaClient()
 
+async function registerAndVerify(app, email, password) {
+  const headers = { 'content-type': 'application/json' }
+  const regRes = await app.inject({
+    method: 'POST', url: '/auth/register', headers,
+    body: JSON.stringify({ email, password }),
+  })
+  const { verifyToken } = regRes.json()
+  await app.inject({ method: 'GET', url: `/auth/verify?token=${verifyToken}` })
+}
+
 beforeEach(async () => {
   await prisma.refreshToken.deleteMany()
   await prisma.session.deleteMany()
@@ -39,6 +49,7 @@ test('POST /auth/register → 201 with user', async () => {
   const body = res.json()
   assert.ok(body.id)
   assert.equal(body.email, 'register@test.com')
+  assert.ok(body.verifyToken)
   await app.close()
 })
 
@@ -94,10 +105,7 @@ test('POST /auth/register duplicate email → 409', async () => {
 test('POST /auth/login → 200 with accessToken and refreshToken', async () => {
   const app = buildApp()
   const headers = { 'content-type': 'application/json' }
-  await app.inject({
-    method: 'POST', url: '/auth/register', headers,
-    body: JSON.stringify({ email: 'login@test.com', password: 'secret12' }),
-  })
+  await registerAndVerify(app, 'login@test.com', 'secret12')
   const res = await app.inject({
     method: 'POST', url: '/auth/login', headers,
     body: JSON.stringify({ email: 'login@test.com', password: 'secret12' }),
@@ -111,10 +119,7 @@ test('POST /auth/login → 200 with accessToken and refreshToken', async () => {
 test('POST /auth/login wrong password → 401', async () => {
   const app = buildApp()
   const headers = { 'content-type': 'application/json' }
-  await app.inject({
-    method: 'POST', url: '/auth/register', headers,
-    body: JSON.stringify({ email: 'badpass@test.com', password: 'correct1' }),
-  })
+  await registerAndVerify(app, 'badpass@test.com', 'correct1')
   const res = await app.inject({
     method: 'POST', url: '/auth/login', headers,
     body: JSON.stringify({ email: 'badpass@test.com', password: 'wrong' }),
@@ -133,10 +138,7 @@ test('GET /me without token → 401', async () => {
 test('GET /me with valid token → 200 with user', async () => {
   const app = buildApp()
   const headers = { 'content-type': 'application/json' }
-  await app.inject({
-    method: 'POST', url: '/auth/register', headers,
-    body: JSON.stringify({ email: 'me@test.com', password: 'password1' }),
-  })
+  await registerAndVerify(app, 'me@test.com', 'password1')
   const loginRes = await app.inject({
     method: 'POST', url: '/auth/login', headers,
     body: JSON.stringify({ email: 'me@test.com', password: 'password1' }),
@@ -154,10 +156,7 @@ test('GET /me with valid token → 200 with user', async () => {
 test('POST /auth/refresh → 200 with new tokens', async () => {
   const app = buildApp()
   const headers = { 'content-type': 'application/json' }
-  await app.inject({
-    method: 'POST', url: '/auth/register', headers,
-    body: JSON.stringify({ email: 'refresh@test.com', password: 'password1' }),
-  })
+  await registerAndVerify(app, 'refresh@test.com', 'password1')
   const loginRes = await app.inject({
     method: 'POST', url: '/auth/login', headers,
     body: JSON.stringify({ email: 'refresh@test.com', password: 'password1' }),
@@ -177,10 +176,7 @@ test('POST /auth/refresh → 200 with new tokens', async () => {
 test('POST /auth/refresh with used token → 401', async () => {
   const app = buildApp()
   const headers = { 'content-type': 'application/json' }
-  await app.inject({
-    method: 'POST', url: '/auth/register', headers,
-    body: JSON.stringify({ email: 'refresh2@test.com', password: 'password1' }),
-  })
+  await registerAndVerify(app, 'refresh2@test.com', 'password1')
   const loginRes = await app.inject({
     method: 'POST', url: '/auth/login', headers,
     body: JSON.stringify({ email: 'refresh2@test.com', password: 'password1' }),
@@ -201,10 +197,7 @@ test('POST /auth/refresh with used token → 401', async () => {
 test('POST /auth/logout → 204, refresh token revoked', async () => {
   const app = buildApp()
   const headers = { 'content-type': 'application/json' }
-  await app.inject({
-    method: 'POST', url: '/auth/register', headers,
-    body: JSON.stringify({ email: 'logout@test.com', password: 'password1' }),
-  })
+  await registerAndVerify(app, 'logout@test.com', 'password1')
   const loginRes = await app.inject({
     method: 'POST', url: '/auth/login', headers,
     body: JSON.stringify({ email: 'logout@test.com', password: 'password1' }),
@@ -229,10 +222,7 @@ test('POST /auth/logout → 204, refresh token revoked', async () => {
 test('POST /auth/change-password → 200, old refresh tokens revoked', async () => {
   const app = buildApp()
   const headers = { 'content-type': 'application/json' }
-  await app.inject({
-    method: 'POST', url: '/auth/register', headers,
-    body: JSON.stringify({ email: 'changepwd@test.com', password: 'oldpass1' }),
-  })
+  await registerAndVerify(app, 'changepwd@test.com', 'oldpass1')
   const loginRes = await app.inject({
     method: 'POST', url: '/auth/login', headers,
     body: JSON.stringify({ email: 'changepwd@test.com', password: 'oldpass1' }),
@@ -257,10 +247,7 @@ test('POST /auth/change-password → 200, old refresh tokens revoked', async () 
 test('POST /auth/change-password wrong current password → 401', async () => {
   const app = buildApp()
   const headers = { 'content-type': 'application/json' }
-  await app.inject({
-    method: 'POST', url: '/auth/register', headers,
-    body: JSON.stringify({ email: 'changepwd2@test.com', password: 'correct1' }),
-  })
+  await registerAndVerify(app, 'changepwd2@test.com', 'correct1')
   const loginRes = await app.inject({
     method: 'POST', url: '/auth/login', headers,
     body: JSON.stringify({ email: 'changepwd2@test.com', password: 'correct1' }),
@@ -279,10 +266,7 @@ test('POST /auth/change-password wrong current password → 401', async () => {
 test('POST /auth/forgot-password → 200 with resetToken', async () => {
   const app = buildApp()
   const headers = { 'content-type': 'application/json' }
-  await app.inject({
-    method: 'POST', url: '/auth/register', headers,
-    body: JSON.stringify({ email: 'forgot@test.com', password: 'password1' }),
-  })
+  await registerAndVerify(app, 'forgot@test.com', 'password1')
   const res = await app.inject({
     method: 'POST', url: '/auth/forgot-password', headers,
     body: JSON.stringify({ email: 'forgot@test.com' }),
@@ -307,10 +291,7 @@ test('POST /auth/forgot-password unknown email → 200 with null token', async (
 test('POST /auth/reset-password → 200, old refresh tokens revoked', async () => {
   const app = buildApp()
   const headers = { 'content-type': 'application/json' }
-  await app.inject({
-    method: 'POST', url: '/auth/register', headers,
-    body: JSON.stringify({ email: 'reset@test.com', password: 'oldpass1' }),
-  })
+  await registerAndVerify(app, 'reset@test.com', 'oldpass1')
   const loginRes = await app.inject({
     method: 'POST', url: '/auth/login', headers,
     body: JSON.stringify({ email: 'reset@test.com', password: 'oldpass1' }),
@@ -363,5 +344,45 @@ test('POST /auth/login rate limit → 429 after 5 attempts', async () => {
     res = await app.inject({ method: 'POST', url: '/auth/login', headers, body })
   }
   assert.equal(res.statusCode, 429)
+  await app.close()
+})
+
+test('POST /auth/login unverified → 403', async () => {
+  const app = buildApp()
+  const headers = { 'content-type': 'application/json' }
+  await app.inject({
+    method: 'POST', url: '/auth/register', headers,
+    body: JSON.stringify({ email: 'unverified@test.com', password: 'password1' }),
+  })
+  const res = await app.inject({
+    method: 'POST', url: '/auth/login', headers,
+    body: JSON.stringify({ email: 'unverified@test.com', password: 'password1' }),
+  })
+  assert.equal(res.statusCode, 403)
+  await app.close()
+})
+
+test('GET /auth/verify → 200, login allowed after', async () => {
+  const app = buildApp()
+  const headers = { 'content-type': 'application/json' }
+  const regRes = await app.inject({
+    method: 'POST', url: '/auth/register', headers,
+    body: JSON.stringify({ email: 'verify@test.com', password: 'password1' }),
+  })
+  const { verifyToken } = regRes.json()
+  const verifyRes = await app.inject({ method: 'GET', url: `/auth/verify?token=${verifyToken}` })
+  assert.equal(verifyRes.statusCode, 200)
+  const loginRes = await app.inject({
+    method: 'POST', url: '/auth/login', headers,
+    body: JSON.stringify({ email: 'verify@test.com', password: 'password1' }),
+  })
+  assert.equal(loginRes.statusCode, 200)
+  await app.close()
+})
+
+test('GET /auth/verify invalid token → 401', async () => {
+  const app = buildApp()
+  const res = await app.inject({ method: 'GET', url: '/auth/verify?token=bad-token' })
+  assert.equal(res.statusCode, 401)
   await app.close()
 })

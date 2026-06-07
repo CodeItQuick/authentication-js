@@ -2,7 +2,7 @@
 
 const rateLimit = require('@fastify/rate-limit')
 const bcrypt = require('bcrypt')
-const { createUser, findByEmail, findById, updatePassword } = require('../db/users')
+const { createUser, findByEmail, findById, updatePassword, verifyEmail } = require('../db/users')
 const {
   issueAccessToken,
   issueRefreshToken,
@@ -10,6 +10,7 @@ const {
   revokeToken,
   revokeAllForUser,
   issuePasswordResetToken,
+  issueEmailVerifyToken,
 } = require('../lib/token')
 const { authenticate } = require('../hooks/authenticate')
 
@@ -57,7 +58,8 @@ async function authRoutes(fastify) {
     if (!user) {
       return reply.code(409).send({ message: 'Email already registered' })
     }
-    return reply.code(201).send({ id: user.id, email: user.email })
+    const verifyToken = issueEmailVerifyToken(fastify, user.id)
+    return reply.code(201).send({ id: user.id, email: user.email, verifyToken })
   })
 
   fastify.post('/auth/login', { schema: loginSchema, config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (request, reply) => {
@@ -67,6 +69,9 @@ async function authRoutes(fastify) {
     const valid = await bcrypt.compare(password, hash)
     if (!user || !valid) {
       return reply.code(401).send({ message: 'Invalid credentials' })
+    }
+    if (!user.emailVerifiedAt) {
+      return reply.code(403).send({ message: 'Email not verified' })
     }
     const accessToken = issueAccessToken(fastify, user)
     const refreshToken = await issueRefreshToken(user.id)
@@ -108,6 +113,24 @@ async function authRoutes(fastify) {
     await updatePassword(user.id, passwordHash)
     await revokeAllForUser(user.id)
     return { message: 'Password updated' }
+  })
+
+  fastify.get('/auth/verify', async (request, reply) => {
+    const { token } = request.query
+    if (!token) {
+      return reply.code(400).send({ message: 'token is required' })
+    }
+    let payload
+    try {
+      payload = fastify.jwt.verify(token)
+    } catch {
+      return reply.code(401).send({ message: 'Invalid or expired verification token' })
+    }
+    if (payload.purpose !== 'email-verify') {
+      return reply.code(401).send({ message: 'Invalid or expired verification token' })
+    }
+    await verifyEmail(payload.sub)
+    return { message: 'Email verified' }
   })
 
   fastify.post('/auth/forgot-password', async (request, reply) => {

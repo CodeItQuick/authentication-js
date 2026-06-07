@@ -6,6 +6,7 @@ const { PrismaClient } = require('@prisma/client')
 const ACCESS_TTL_SECONDS = 15 * 60
 const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000
 const RESET_TTL_SECONDS = 60 * 60
+const VERIFY_TTL_SECONDS = 24 * 60 * 60
 
 let prisma
 function client() {
@@ -75,6 +76,13 @@ function issuePasswordResetToken(fastify, userId) {
   )
 }
 
+function issueEmailVerifyToken(fastify, userId) {
+  return fastify.jwt.sign(
+    { sub: userId, purpose: 'email-verify' },
+    { expiresIn: VERIFY_TTL_SECONDS }
+  )
+}
+
 module.exports = {
   issueAccessToken,
   issueRefreshToken,
@@ -82,4 +90,5 @@ module.exports = {
   revokeToken,
   revokeAllForUser,
   issuePasswordResetToken,
+  issueEmailVerifyToken,
 }
