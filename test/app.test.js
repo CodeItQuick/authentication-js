@@ -386,3 +386,49 @@ test('GET /auth/verify invalid token → 401', async () => {
   assert.equal(res.statusCode, 401)
   await app.close()
 })
+
+test('GET /admin/users as regular user → 403', async () => {
+  const app = buildApp()
+  const headers = { 'content-type': 'application/json' }
+  await registerAndVerify(app, 'user@test.com', 'password1')
+  const loginRes = await app.inject({
+    method: 'POST', url: '/auth/login', headers,
+    body: JSON.stringify({ email: 'user@test.com', password: 'password1' }),
+  })
+  const { accessToken } = loginRes.json()
+  const res = await app.inject({
+    method: 'GET', url: '/admin/users',
+    headers: { authorization: `Bearer ${accessToken}` },
+  })
+  assert.equal(res.statusCode, 403)
+  await app.close()
+})
+
+test('GET /admin/users as admin → 200 with users array', async () => {
+  const app = buildApp()
+  const headers = { 'content-type': 'application/json' }
+  const bcrypt = require('bcrypt')
+  const passwordHash = await bcrypt.hash('password1', 12)
+  await prisma.user.create({
+    data: { email: 'admin@test.com', passwordHash, role: 'admin', emailVerifiedAt: new Date() },
+  })
+  const loginRes = await app.inject({
+    method: 'POST', url: '/auth/login', headers,
+    body: JSON.stringify({ email: 'admin@test.com', password: 'password1' }),
+  })
+  const { accessToken } = loginRes.json()
+  const res = await app.inject({
+    method: 'GET', url: '/admin/users',
+    headers: { authorization: `Bearer ${accessToken}` },
+  })
+  assert.equal(res.statusCode, 200)
+  assert.ok(Array.isArray(res.json().users))
+  await app.close()
+})
+
+test('GET /admin/users without token → 401', async () => {
+  const app = buildApp()
+  const res = await app.inject({ method: 'GET', url: '/admin/users' })
+  assert.equal(res.statusCode, 401)
+  await app.close()
+})

@@ -16,6 +16,7 @@ function buildApp(opts = {}) {
   app.register(require('./routes/health'))
   app.register(require('./routes/auth'))
   app.register(require('./routes/me'))
+  app.register(require('./routes/admin'))
 
   return app
 }
