@@ -198,3 +198,131 @@ test('POST /auth/logout → 204, refresh token revoked', async () => {
   assert.equal(refreshRes.statusCode, 401)
   await app.close()
 })
+
+test('POST /auth/change-password → 200, old refresh tokens revoked', async () => {
+  const app = buildApp()
+  const headers = { 'content-type': 'application/json' }
+  await app.inject({
+    method: 'POST', url: '/auth/register', headers,
+    body: JSON.stringify({ email: 'changepwd@test.com', password: 'oldpass' }),
+  })
+  const loginRes = await app.inject({
+    method: 'POST', url: '/auth/login', headers,
+    body: JSON.stringify({ email: 'changepwd@test.com', password: 'oldpass' }),
+  })
+  const { accessToken, refreshToken } = loginRes.json()
+
+  const changeRes = await app.inject({
+    method: 'POST', url: '/auth/change-password',
+    headers: { ...headers, authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ currentPassword: 'oldpass', newPassword: 'newpass' }),
+  })
+  assert.equal(changeRes.statusCode, 200)
+
+  const refreshRes = await app.inject({
+    method: 'POST', url: '/auth/refresh', headers,
+    body: JSON.stringify({ refreshToken }),
+  })
+  assert.equal(refreshRes.statusCode, 401)
+  await app.close()
+})
+
+test('POST /auth/change-password wrong current password → 401', async () => {
+  const app = buildApp()
+  const headers = { 'content-type': 'application/json' }
+  await app.inject({
+    method: 'POST', url: '/auth/register', headers,
+    body: JSON.stringify({ email: 'changepwd2@test.com', password: 'correct' }),
+  })
+  const loginRes = await app.inject({
+    method: 'POST', url: '/auth/login', headers,
+    body: JSON.stringify({ email: 'changepwd2@test.com', password: 'correct' }),
+  })
+  const { accessToken } = loginRes.json()
+
+  const res = await app.inject({
+    method: 'POST', url: '/auth/change-password',
+    headers: { ...headers, authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ currentPassword: 'wrong', newPassword: 'newpass' }),
+  })
+  assert.equal(res.statusCode, 401)
+  await app.close()
+})
+
+test('POST /auth/forgot-password → 200 with resetToken', async () => {
+  const app = buildApp()
+  const headers = { 'content-type': 'application/json' }
+  await app.inject({
+    method: 'POST', url: '/auth/register', headers,
+    body: JSON.stringify({ email: 'forgot@test.com', password: 'pass' }),
+  })
+  const res = await app.inject({
+    method: 'POST', url: '/auth/forgot-password', headers,
+    body: JSON.stringify({ email: 'forgot@test.com' }),
+  })
+  assert.equal(res.statusCode, 200)
+  assert.ok(res.json().resetToken)
+  await app.close()
+})
+
+test('POST /auth/forgot-password unknown email → 200 with null token', async () => {
+  const app = buildApp()
+  const res = await app.inject({
+    method: 'POST', url: '/auth/forgot-password',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'nobody@test.com' }),
+  })
+  assert.equal(res.statusCode, 200)
+  assert.equal(res.json().resetToken, null)
+  await app.close()
+})
+
+test('POST /auth/reset-password → 200, old refresh tokens revoked', async () => {
+  const app = buildApp()
+  const headers = { 'content-type': 'application/json' }
+  await app.inject({
+    method: 'POST', url: '/auth/register', headers,
+    body: JSON.stringify({ email: 'reset@test.com', password: 'oldpass' }),
+  })
+  const loginRes = await app.inject({
+    method: 'POST', url: '/auth/login', headers,
+    body: JSON.stringify({ email: 'reset@test.com', password: 'oldpass' }),
+  })
+  const { refreshToken } = loginRes.json()
+
+  const forgotRes = await app.inject({
+    method: 'POST', url: '/auth/forgot-password', headers,
+    body: JSON.stringify({ email: 'reset@test.com' }),
+  })
+  const { resetToken } = forgotRes.json()
+
+  const resetRes = await app.inject({
+    method: 'POST', url: '/auth/reset-password', headers,
+    body: JSON.stringify({ token: resetToken, newPassword: 'newpass' }),
+  })
+  assert.equal(resetRes.statusCode, 200)
+
+  const refreshRes = await app.inject({
+    method: 'POST', url: '/auth/refresh', headers,
+    body: JSON.stringify({ refreshToken }),
+  })
+  assert.equal(refreshRes.statusCode, 401)
+
+  const loginRes2 = await app.inject({
+    method: 'POST', url: '/auth/login', headers,
+    body: JSON.stringify({ email: 'reset@test.com', password: 'newpass' }),
+  })
+  assert.equal(loginRes2.statusCode, 200)
+  await app.close()
+})
+
+test('POST /auth/reset-password invalid token → 401', async () => {
+  const app = buildApp()
+  const res = await app.inject({
+    method: 'POST', url: '/auth/reset-password',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ token: 'not-a-valid-token', newPassword: 'newpass' }),
+  })
+  assert.equal(res.statusCode, 401)
+  await app.close()
+})

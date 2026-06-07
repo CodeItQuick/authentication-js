@@ -258,25 +258,41 @@ The skeleton is the product. The SPIDR stories harden it.
 
 ## EPIC-7 · Password Reset (SPIDR — Path)
 
-### PWD-1 · Request password reset email
+### PWD-0 · Change password (authenticated)
 
-**Story:** As a user who forgot my password, I need to request a reset link.
+**Story:** As a logged-in user, I need to change my password so I can update my credentials.
 
 **Acceptance Criteria:**
-- `POST /auth/forgot-password` with `{ email }` sends reset email
-- Always returns `200` whether or not email exists (prevent enumeration)
+- `POST /auth/change-password` (authenticated) with `{ currentPassword, newPassword }` updates `password_hash`
+- Validates current password with bcrypt before allowing change
+- All active refresh tokens for the user are revoked on change (forces re-login on other devices)
+- Returns `200`
+
+**Tasks:**
+- [ ] `updatePassword(id, passwordHash)` in `src/db/users.js`
+- [ ] `revokeAllForUser(userId)` in `src/lib/token.js`
+- [ ] `POST /auth/change-password` handler
+
+---
+
+### PWD-1 · Request password reset token
+
+**Story:** As a user who forgot my password, I need to request a reset token so I can set a new password.
+
+**Acceptance Criteria:**
+- `POST /auth/forgot-password` with `{ email }` returns `{ resetToken }` directly in the response
+- Always returns `200` whether or not email exists (prevent enumeration); token is `null` if email not found
 - Reset token: short-lived JWT `{ sub: userId, purpose: "password-reset", exp: +1h }`
 
 **Tasks:**
-- [ ] Email plugin `src/plugins/mailer.js` (nodemailer / Resend)
+- [ ] `issuePasswordResetToken(fastify, userId)` in `src/lib/token.js`
 - [ ] `POST /auth/forgot-password` handler
-- [ ] Email template with reset link
 
 ---
 
 ### PWD-2 · Consume reset token
 
-**Story:** As a user, I need to set a new password via the reset link.
+**Story:** As a user, I need to set a new password using my reset token.
 
 **Acceptance Criteria:**
 - `POST /auth/reset-password` with `{ token, newPassword }` updates `password_hash`
@@ -298,15 +314,15 @@ The skeleton is the product. The SPIDR stories harden it.
 **Story:** As the system, I need to confirm the user owns their email before allowing login.
 
 **Acceptance Criteria:**
-- On register, send verification email with signed token link
-- `GET /auth/verify?token=<token>` sets `email_verified_at`
+- On register, return a `verifyToken` in the response (same pattern as password reset — no email dependency)
+- `GET /auth/verify?token=<token>` sets `emailVerifiedAt`
 - Unverified users attempting login get `403 { message: "Email not verified" }`
 
 **Tasks:**
-- [ ] `email_verified_at TIMESTAMPTZ` column + migration
+- [ ] `emailVerifiedAt DateTime?` field + `prisma db push`
 - [ ] Verification token: JWT `{ sub: userId, purpose: "email-verify" }`, TTL 24h
 - [ ] `GET /auth/verify` handler
-- [ ] Login handler checks `email_verified_at`
+- [ ] Login handler checks `emailVerifiedAt`
 
 ---
 
@@ -390,6 +406,6 @@ fastify
 @fastify/rate-limit   (RATE-1)
 bcrypt                (SEC-1)
 dotenv
-nodemailer or resend  (PWD-1, EML-1)
+no email dependency — reset/verify tokens returned in API responses
 pg / prisma / drizzle (DB-1 spike decision)
 ```

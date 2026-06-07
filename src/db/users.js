@@ -26,4 +26,8 @@ async function findById(id) {
   return client().user.findUnique({ where: { id } })
 }
 
-module.exports = { createUser, findByEmail, findById }
+async function updatePassword(id, passwordHash) {
+  return client().user.update({ where: { id }, data: { passwordHash } })
+}
+
+module.exports = { createUser, findByEmail, findById, updatePassword }

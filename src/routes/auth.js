@@ -1,8 +1,15 @@
 'use strict'
 
 const bcrypt = require('bcrypt')
-const { createUser, findByEmail } = require('../db/users')
-const { issueAccessToken, issueRefreshToken, rotateRefreshToken, revokeToken } = require('../lib/token')
+const { createUser, findByEmail, findById, updatePassword } = require('../db/users')
+const {
+  issueAccessToken,
+  issueRefreshToken,
+  rotateRefreshToken,
+  revokeToken,
+  revokeAllForUser,
+  issuePasswordResetToken,
+} = require('../lib/token')
 const { authenticate } = require('../hooks/authenticate')
 
 const BCRYPT_ROUNDS = 12
@@ -58,6 +65,52 @@ async function authRoutes(fastify) {
       await revokeToken(refreshToken)
     }
     return reply.code(204).send()
+  })
+
+  fastify.post('/auth/change-password', { preHandler: authenticate }, async (request, reply) => {
+    const { currentPassword, newPassword } = request.body ?? {}
+    if (!currentPassword || !newPassword) {
+      return reply.code(400).send({ message: 'currentPassword and newPassword are required' })
+    }
+    const user = await findById(request.user.id)
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash)
+    if (!valid) {
+      return reply.code(401).send({ message: 'Current password is incorrect' })
+    }
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS)
+    await updatePassword(user.id, passwordHash)
+    await revokeAllForUser(user.id)
+    return { message: 'Password updated' }
+  })
+
+  fastify.post('/auth/forgot-password', async (request, reply) => {
+    const { email } = request.body ?? {}
+    if (!email) {
+      return reply.code(400).send({ message: 'email is required' })
+    }
+    const user = await findByEmail(email)
+    const resetToken = user ? issuePasswordResetToken(fastify, user.id) : null
+    return { resetToken }
+  })
+
+  fastify.post('/auth/reset-password', async (request, reply) => {
+    const { token, newPassword } = request.body ?? {}
+    if (!token || !newPassword) {
+      return reply.code(400).send({ message: 'token and newPassword are required' })
+    }
+    let payload
+    try {
+      payload = fastify.jwt.verify(token)
+    } catch {
+      return reply.code(401).send({ message: 'Invalid or expired reset token' })
+    }
+    if (payload.purpose !== 'password-reset') {
+      return reply.code(401).send({ message: 'Invalid or expired reset token' })
+    }
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS)
+    await updatePassword(payload.sub, passwordHash)
+    await revokeAllForUser(payload.sub)
+    return { message: 'Password reset' }
   })
 }
 

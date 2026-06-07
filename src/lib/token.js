@@ -5,6 +5,7 @@ const { PrismaClient } = require('@prisma/client')
 
 const ACCESS_TTL_SECONDS = 15 * 60
 const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000
+const RESET_TTL_SECONDS = 60 * 60
 
 let prisma
 function client() {
@@ -60,4 +61,25 @@ async function revokeToken(raw) {
   })
 }
 
-module.exports = { issueAccessToken, issueRefreshToken, rotateRefreshToken, revokeToken }
+async function revokeAllForUser(userId) {
+  await client().refreshToken.updateMany({
+    where: { userId },
+    data: { revokedAt: new Date() },
+  })
+}
+
+function issuePasswordResetToken(fastify, userId) {
+  return fastify.jwt.sign(
+    { sub: userId, purpose: 'password-reset' },
+    { expiresIn: RESET_TTL_SECONDS }
+  )
+}
+
+module.exports = {
+  issueAccessToken,
+  issueRefreshToken,
+  rotateRefreshToken,
+  revokeToken,
+  revokeAllForUser,
+  issuePasswordResetToken,
+}
