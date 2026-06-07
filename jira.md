@@ -182,7 +182,7 @@ The skeleton is the product. The SPIDR stories harden it.
 
 ## EPIC-4 · Harden Sessions → JWT + Refresh Tokens (SPIDR — Data + Rules)
 
-### SES-1 · Replace UUID session tokens with JWTs
+### ~~SES-1 · Replace UUID session tokens with JWTs~~ ✅ Done
 
 **Story:** As the system, I need stateless access tokens so protected routes can authorize without a DB lookup on every request.
 
@@ -195,11 +195,11 @@ The skeleton is the product. The SPIDR stories harden it.
 - `JWT_SECRET` env var, minimum 32 bytes
 
 **Tasks:**
-- [ ] Install `@fastify/jwt`
-- [ ] `src/plugins/jwt.js`
-- [ ] `src/lib/token.js` — `issueAccessToken(user)`
-- [ ] Rewrite `authenticate` hook to use `request.jwtVerify()`
-- [ ] Login handler replaces UUID issuance with JWT
+- [x] Install `@fastify/jwt`
+- [x] `src/plugins/jwt.js`
+- [x] `src/lib/token.js` — `issueAccessToken(user)`
+- [x] Rewrite `authenticate` hook to use `request.jwtVerify()`
+- [x] Login handler replaces UUID issuance with JWT
 
 ---
 
